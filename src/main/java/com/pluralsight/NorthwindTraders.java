@@ -5,23 +5,29 @@ import java.sql.*;
 public class NorthwindTraders {
     public static void main(String[] args) {
         try {
-            // Step 1: open the connection
             Connection connection = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/northwind", "root", "yearup24");
+                    "jdbc:mysql://localhost:3306/northwind?useSSL=false&serverTimezone=UTC",
+                    "root",
+                    "yearup24"
+            );
 
-            // Step 2: create a statement
             Statement statement = connection.createStatement();
 
-            // Step 3a: execute the query
-            String query = "SELECT ProductName FROM products;";
+            String query = "SELECT ProductID, ProductName, UnitPrice, UnitsInStock FROM products;";
             ResultSet resultSet = statement.executeQuery(query);
 
-            // Step 3b: process the results
+            System.out.println("Id  Name                 Price   Stock");
+            System.out.println("---------------------------------------");
+
             while (resultSet.next()) {
-                System.out.println(resultSet.getString("ProductName"));
+                int id = resultSet.getInt("ProductID");
+                String name = resultSet.getString("ProductName");
+                double price = resultSet.getDouble("UnitPrice");
+                int stock = resultSet.getInt("UnitsInStock");
+
+                System.out.printf("%-4d%-20s%-8.2f%-6d%n", id, name, price, stock);
             }
 
-            // Step 4: close the connection
             connection.close();
 
         } catch (SQLException e) {
