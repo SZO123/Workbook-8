@@ -3,15 +3,15 @@ package com.pluralsight.Sakila;
 import org.apache.commons.dbcp2.BasicDataSource;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.util.List;
 import java.util.Scanner;
 
 public class SakilaMovies {
+
     public static void main(String[] args) {
 
         if (args.length < 2) {
             System.out.println("Provide MySQL username and password as arguments.");
-            System.out.println("Example: java com.pluralsight.SakilaMovies root yearup24");
             return;
         }
 
@@ -19,24 +19,49 @@ public class SakilaMovies {
         String dbPass = args[1];
 
         DataSource dataSource = createDataSource(dbUser, dbPass);
+        DataManager dataManager = new DataManager(dataSource);
         Scanner scanner = new Scanner(System.in);
 
-        System.out.print("Enter actor last name: ");
-        String lastNameSearch = scanner.nextLine().trim();
+        System.out.print("Search for actor name: ");
+        String search = scanner.nextLine().trim();
 
-        listActorsByLastName(dataSource, lastNameSearch);
+        List<Actor> actors = dataManager.searchActorsByName(search);
 
-        System.out.println();
-        System.out.println("Now select an actor to view films.");
-
-        System.out.print("Enter actor first name: ");
-        String firstName = scanner.nextLine().trim();
-
-        System.out.print("Enter actor last name: ");
-        String lastName = scanner.nextLine().trim();
+        if (actors.isEmpty()) {
+            System.out.println("No actors found.");
+            return;
+        }
 
         System.out.println();
-        listFilmsForActor(dataSource, firstName, lastName);
+        System.out.println("Actors found:");
+        for (Actor actor : actors) {
+            System.out.printf("%-4d%s %s%n",
+                    actor.getActorId(),
+                    actor.getFirstName(),
+                    actor.getLastName());
+        }
+
+        System.out.println();
+        System.out.print("Enter actor id to view films: ");
+        int actorId = scanner.nextInt();
+        scanner.nextLine();
+
+        List<Film> films = dataManager.getFilmsByActorId(actorId);
+
+        System.out.println();
+        if (films.isEmpty()) {
+            System.out.println("No films found for that actor.");
+            return;
+        }
+
+        System.out.println("Films for actor id " + actorId + ":");
+        for (Film film : films) {
+            System.out.printf("%-4d%s (%d) %d min%n",
+                    film.getFilmId(),
+                    film.getTitle(),
+                    film.getReleaseYear(),
+                    film.getLength());
+        }
     }
 
     private static DataSource createDataSource(String username, String password) {
@@ -46,84 +71,5 @@ public class SakilaMovies {
         ds.setPassword(password);
         ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
         return ds;
-    }
-
-    private static void listActorsByLastName(DataSource dataSource, String lastName) {
-        String sql =
-                "SELECT actor_id, first_name, last_name " +
-                        "FROM actor " +
-                        "WHERE last_name = ? " +
-                        "ORDER BY first_name, last_name";
-
-        try (
-                Connection connection = dataSource.getConnection();
-                PreparedStatement stmt = connection.prepareStatement(sql)
-        ) {
-            stmt.setString(1, lastName);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-
-                boolean any = false;
-
-                System.out.println();
-                System.out.println("Actors with last name '" + lastName + "':");
-
-                while (rs.next()) {
-                    any = true;
-                    int id = rs.getInt("actor_id");
-                    String first = rs.getString("first_name");
-                    String last = rs.getString("last_name");
-
-                    System.out.printf("%-4d%s %s%n", id, first, last);
-                }
-
-                if (!any) {
-                    System.out.println("No actors found with that last name.");
-                }
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Error loading actors.");
-            e.printStackTrace();
-        }
-    }
-
-    private static void listFilmsForActor(DataSource dataSource, String firstName, String lastName) {
-        String sql =
-                "SELECT f.title " +
-                        "FROM actor a " +
-                        "JOIN film_actor fa ON a.actor_id = fa.actor_id " +
-                        "JOIN film f ON fa.film_id = f.film_id " +
-                        "WHERE a.first_name = ? AND a.last_name = ? " +
-                        "ORDER BY f.title";
-
-        try (
-                Connection connection = dataSource.getConnection();
-                PreparedStatement stmt = connection.prepareStatement(sql)
-        ) {
-            stmt.setString(1, firstName);
-            stmt.setString(2, lastName);
-
-            try (ResultSet rs = stmt.executeQuery()) {
-
-                boolean any = false;
-
-                System.out.println("Films for " + firstName + " " + lastName + ":");
-
-                while (rs.next()) {
-                    any = true;
-                    String title = rs.getString("title");
-                    System.out.println(title);
-                }
-
-                if (!any) {
-                    System.out.println("No films found for that actor.");
-                }
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Error loading films.");
-            e.printStackTrace();
-        }
     }
 }
