@@ -11,7 +11,7 @@ public class NorthwindShippers {
     public static void main(String[] args) {
 
         if (args.length < 2) {
-            System.out.println("Provide MySQL username and password as arguments.");
+            System.out.println("Provide MySQL username & password as arguments.");
             return;
         }
 
